@@ -105,6 +105,7 @@ const response = await fetch('/api/upload', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: jsonStream,
+  duplex: 'half',
 });
 
 // Or with wretch for cleaner API calls
@@ -113,6 +114,7 @@ import wretch from 'wretch';
 const result = await wretch('/api/upload')
   .headers({ 'Content-Type': 'application/json' })
   .body(jsonStream)
+  .options({ duplex: 'half' })
   .post()
   .json();
 ```
