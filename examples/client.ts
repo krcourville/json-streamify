@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
-import { readFileSync, writeFileSync } from 'fs';
-import { jsonStreamify } from '../src/index';
+import { writeFileSync } from 'fs';
+import { createStreamFromFile, jsonStreamify, streamToString } from '../src/index';
 
 const API_URL = 'http://localhost:3000/upload';
 
@@ -23,27 +23,6 @@ function createSampleFiles() {
   writeFileSync('sample.json', jsonContent);
 
   console.log('✅ Sample files created: sample.txt, sample.json\n');
-}
-
-function createStreamFromFile(filePath: string): Readable {
-  const content = readFileSync(filePath);
-  return Readable.from([content]);
-}
-
-async function streamToString(stream: Readable): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: string[] = [];
-
-    stream.on('data', (chunk: string) => {
-      chunks.push(chunk);
-    });
-
-    stream.on('end', () => {
-      resolve(chunks.join(''));
-    });
-
-    stream.on('error', reject);
-  });
 }
 
 async function demonstrateJsonStreamify() {

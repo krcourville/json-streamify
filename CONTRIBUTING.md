@@ -13,10 +13,13 @@ Thank you for your interest in contributing to json-streamify! This document pro
 
 1. Clone the repository
 2. Install dependencies:
+
    ```bash
    npm install
    ```
+
 3. Build the project:
+
    ```bash
    npm run build
    ```
@@ -56,6 +59,9 @@ npm run format
 
 # Run all checks (lint + format + test)
 npm run check
+
+# Prepare for PR/publishing (clean, fix, test, build)
+npm run pr
 ```
 
 ### Running the Demo
@@ -84,18 +90,21 @@ This starts a local Express server and demonstrates the library working with a r
 ### Pre-publish Checklist
 
 1. **Update version** in `package.json`:
+
    ```bash
    npm version patch|minor|major
    ```
 
-2. **Build and test**:
+2. **Run pre-publish checks**:
+
    ```bash
-   npm run build
-   npm test
-   npm run demo
+   npm run pr
    ```
 
+   This will clean, auto-fix linting/formatting, run tests, and build the project.
+
 3. **Verify package contents**:
+
    ```bash
    npm pack --dry-run
    ```
@@ -123,7 +132,7 @@ Demo files and development dependencies are excluded via `.gitignore` and npm's 
 
 ## Project Structure
 
-```
+```text
 json-streamify/
 ├── src/
 │   ├── index.ts              # Main library code
@@ -152,12 +161,17 @@ The project includes several automated quality checks:
 
 ## Release Process
 
-1. Ensure all tests pass: `npm run check`
+1. Run pre-publish checks: `npm run pr`
 2. Update version: `npm version [patch|minor|major]`
-3. Build: `npm run build`
-4. Publish: `npm publish`
-5. Tag the release in git
-6. Update changelog if applicable
+3. Publish: `npm publish`
+4. Tag the release in git:
+
+   ```bash
+   git tag v1.0.0  # Replace with actual version
+   git push origin v1.0.0
+   ```
+
+5. Update changelog if applicable
 
 ## Getting Help
 

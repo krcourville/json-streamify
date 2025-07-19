@@ -43,6 +43,26 @@ Works exactly like `JSON.stringify()` but returns a `Readable` stream and automa
 
 **Returns:** `Readable<string>` - A stream that outputs the JSON string
 
+### `streamToString(stream)`
+
+Utility function to convert a `Readable` stream to a string.
+
+**Parameters:**
+
+- `stream` - The `Readable` stream to convert
+
+**Returns:** `Promise<string>` - Promise that resolves to the complete string content
+
+### `createStreamFromFile(filePath)`
+
+Utility function to create a `Readable` stream from a file.
+
+**Parameters:**
+
+- `filePath` - The path to the file to read
+
+**Returns:** `Readable` - A stream containing the file content
+
 ## Compatibility
 
 - **Node.js**: 18.0.0 or higher

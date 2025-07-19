@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-esm/
+coverage/
+*.log
+.eslintrc.js
+jest.config.js
+.prettierrc.js

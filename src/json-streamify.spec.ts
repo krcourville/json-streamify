@@ -1,5 +1,6 @@
 import { Readable } from 'stream';
-import { jsonStreamify } from '../index';
+import { jsonStreamify } from './json-streamify';
+import { streamToString } from './stream-to-string';
 
 describe('jsonStreamify', () => {
   it('should handle simple objects', async () => {
@@ -149,19 +150,3 @@ describe('jsonStreamify', () => {
     expect(stream).toBeInstanceOf(Readable);
   });
 });
-
-function streamToString(stream: Readable): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: string[] = [];
-
-    stream.on('data', (chunk: string) => {
-      chunks.push(chunk);
-    });
-
-    stream.on('end', () => {
-      resolve(chunks.join(''));
-    });
-
-    stream.on('error', reject);
-  });
-}

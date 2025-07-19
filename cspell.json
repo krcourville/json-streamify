@@ -1,0 +1,20 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "sparkpost",
+    "SPARKPOST",
+    "streamify",
+    "Streamify",
+    "endobj",
+    "startxref",
+    "cajuncodemonkey",
+    "dotenv",
+    "wretch",
+    "eslint",
+    "prettier",
+    "tsconfig",
+    "npmjs"
+  ],
+  "ignorePaths": ["node_modules/**", "dist/**", "coverage/**", "*.log", "package-lock.json"]
+}

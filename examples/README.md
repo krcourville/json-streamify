@@ -6,6 +6,7 @@ This directory contains a demonstration of the `json-streamify` library working 
 
 - `server.ts` - Express.js server that accepts JSON requests with Base64-encoded files
 - `client.ts` - Demo client that uses json-streamify to send file data
+- `sparkpost-email.ts` - SparkPost email example with Base64 attachments
 - `README.md` - This documentation
 
 ## Running the Demo
@@ -39,7 +40,38 @@ npm run demo:server
 npm run demo:client
 ```
 
-## What the Demo Does
+### Option 3: SparkPost Email Demo
+
+Run the SparkPost email example with attachments:
+
+```bash
+npm run demo:sparkpost
+```
+
+**Configuration**: The SparkPost demo requires API credentials. You can configure them in two ways:
+
+1. **Using .env file (recommended)**:
+
+   ```bash
+   # Copy the example configuration
+   cp .env.example .env
+
+   # Edit .env with your credentials
+   # SPARKPOST_API_KEY=your-sparkpost-api-key
+   # TEST_EMAIL=test@your-domain.com
+   # FROM_EMAIL=demo@your-sending-domain.com
+   # FROM_NAME=json-streamify Demo
+   ```
+
+2. **Using environment variables**:
+
+   ```bash
+   SPARKPOST_API_KEY=your-api-key npm run demo:sparkpost
+   ```
+
+## What the Demos Do
+
+### File Upload Demo (client.ts + server.ts)
 
 1. **Creates sample files** - Generates `sample.txt` and `sample.json` for demonstration
 2. **Creates file streams** - Converts files into Node.js Readable streams
@@ -47,6 +79,14 @@ npm run demo:client
 4. **Sends HTTP request** - Posts the JSON to the local Express server
 5. **Server processes** - Decodes Base64 data back to original files
 6. **Verifies integrity** - Confirms files were transmitted and decoded correctly
+
+### SparkPost Email Demo (sparkpost-email.ts)
+
+1. **Creates sample attachments** - Generates PDF and CSV files for email attachments
+2. **Builds email payload** - Creates SparkPost transmission object with file streams
+3. **Uses json-streamify** - Automatically converts file streams to Base64 in the JSON payload
+4. **Sends to SparkPost API** - Posts the transmission request with inline attachments
+5. **Email delivery** - SparkPost processes and delivers the email with Base64-decoded attachments
 
 ## Expected Output
 

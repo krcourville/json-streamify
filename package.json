@@ -21,12 +21,14 @@
     "clean": "rm -rf dist dist-esm",
     "demo:server": "ts-node examples/server.ts",
     "demo:client": "ts-node examples/client.ts",
+    "demo:sparkpost": "ts-node examples/sparkpost-email.ts",
     "demo": "npm run demo:server & sleep 2 && npm run demo:client && pkill -f 'ts-node examples/server.ts'",
     "lint": "eslint src examples --ext .ts",
     "lint:fix": "eslint src examples --ext .ts --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run format:check && npm run test",
+    "pr": "npm run clean && npm run lint:fix && npm run format && npm run test && npm run build",
     "prepare": "npm run build"
   },
   "keywords": [
@@ -47,6 +49,8 @@
     "express": "^4.18.0",
     "@types/express": "^4.17.0",
     "ts-node": "^10.9.0",
+    "wretch": "^2.8.0",
+    "dotenv": "^16.0.0",
     "eslint": "^8.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
