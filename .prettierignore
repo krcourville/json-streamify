@@ -1,0 +1,22 @@
+# Build outputs
+dist/
+dist-esm/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Generated files
+coverage/
+*.log
+
+# Demo artifacts
+examples/uploads/
+examples/*.txt
+examples/*.json
+sample.txt
+sample.json
+
+# Package files
+package-lock.json
+yarn.lock
