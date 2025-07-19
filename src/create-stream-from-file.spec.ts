@@ -1,5 +1,4 @@
-import { Readable } from 'stream';
-import { unlinkSync, writeFileSync } from 'fs';
+import { unlink, writeFile } from 'fs/promises';
 import { createStreamFromFile } from './create-stream-from-file';
 import { streamToString } from './stream-to-string';
 
@@ -7,13 +6,13 @@ describe('createStreamFromFile', () => {
   const testFileName = 'test-file.txt';
   const testContent = 'Hello from test file!\nThis is a test.';
 
-  beforeEach(() => {
-    writeFileSync(testFileName, testContent);
+  beforeEach(async () => {
+    await writeFile(testFileName, testContent);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     try {
-      unlinkSync(testFileName);
+      await unlink(testFileName);
     } catch {
       // Ignore cleanup errors
     }
@@ -21,7 +20,7 @@ describe('createStreamFromFile', () => {
 
   it('should create a stream from a text file', async () => {
     const stream = createStreamFromFile(testFileName);
-    expect(stream).toBeInstanceOf(Readable);
+    expect(stream).toBeInstanceOf(ReadableStream);
 
     const result = await streamToString(stream);
     expect(result).toBe(testContent);
@@ -30,32 +29,31 @@ describe('createStreamFromFile', () => {
   it('should handle binary files', async () => {
     const binaryContent = Buffer.from([0x48, 0x65, 0x6c, 0x6c, 0x6f]); // "Hello" in bytes
     const binaryFileName = 'test-binary.bin';
-    writeFileSync(binaryFileName, binaryContent);
+    await writeFile(binaryFileName, binaryContent);
 
     try {
       const stream = createStreamFromFile(binaryFileName);
-      expect(stream).toBeInstanceOf(Readable);
+      expect(stream).toBeInstanceOf(ReadableStream);
 
       const result = await streamToString(stream);
       expect(result).toBe('Hello');
     } finally {
       try {
-        unlinkSync(binaryFileName);
+        await unlink(binaryFileName);
       } catch {
         // Ignore cleanup errors
       }
     }
   });
 
-  it('should throw error for non-existent file', () => {
-    expect(() => {
-      createStreamFromFile('non-existent-file.txt');
-    }).toThrow();
+  it('should error when reading non-existent file', async () => {
+    const stream = createStreamFromFile('non-existent-file.txt');
+    await expect(streamToString(stream)).rejects.toThrow();
   });
 
   it('should handle empty files', async () => {
     const emptyFileName = 'empty-file.txt';
-    writeFileSync(emptyFileName, '');
+    await writeFile(emptyFileName, '');
 
     try {
       const stream = createStreamFromFile(emptyFileName);
@@ -63,7 +61,7 @@ describe('createStreamFromFile', () => {
       expect(result).toBe('');
     } finally {
       try {
-        unlinkSync(emptyFileName);
+        await unlink(emptyFileName);
       } catch {
         // Ignore cleanup errors
       }
@@ -73,7 +71,7 @@ describe('createStreamFromFile', () => {
   it('should handle large files', async () => {
     const largeContent = 'Large file content\n'.repeat(1000);
     const largeFileName = 'large-file.txt';
-    writeFileSync(largeFileName, largeContent);
+    await writeFile(largeFileName, largeContent);
 
     try {
       const stream = createStreamFromFile(largeFileName);
@@ -82,7 +80,7 @@ describe('createStreamFromFile', () => {
       expect(result.length).toBe(largeContent.length);
     } finally {
       try {
-        unlinkSync(largeFileName);
+        await unlink(largeFileName);
       } catch {
         // Ignore cleanup errors
       }

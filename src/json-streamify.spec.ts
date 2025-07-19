@@ -1,4 +1,3 @@
-import { Readable } from 'stream';
 import { jsonStreamify } from './json-streamify';
 import { streamToString } from './stream-to-string';
 
@@ -39,9 +38,14 @@ describe('jsonStreamify', () => {
     expect(result).toBe(JSON.stringify(input));
   });
 
-  it('should convert Readable streams to Base64', async () => {
-    const testData = Buffer.from('Hello, World!', 'utf8');
-    const inputStream = Readable.from([testData]);
+  it('should convert ReadableStream to Base64', async () => {
+    const testData = new TextEncoder().encode('Hello, World!');
+    const inputStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(testData);
+        controller.close();
+      },
+    });
     const input = {
       message: 'test',
       file: inputStream,
@@ -52,14 +56,24 @@ describe('jsonStreamify', () => {
     const parsed = JSON.parse(result);
 
     expect(parsed.message).toBe('test');
-    expect(parsed.file).toBe(testData.toString('base64'));
+    expect(parsed.file).toBe(Buffer.from(testData).toString('base64'));
   });
 
-  it('should handle multiple Readable streams', async () => {
-    const data1 = Buffer.from('File 1 content', 'utf8');
-    const data2 = Buffer.from('File 2 content', 'utf8');
-    const stream1 = Readable.from([data1]);
-    const stream2 = Readable.from([data2]);
+  it('should handle multiple ReadableStreams', async () => {
+    const data1 = new TextEncoder().encode('File 1 content');
+    const data2 = new TextEncoder().encode('File 2 content');
+    const stream1 = new ReadableStream({
+      start(controller) {
+        controller.enqueue(data1);
+        controller.close();
+      },
+    });
+    const stream2 = new ReadableStream({
+      start(controller) {
+        controller.enqueue(data2);
+        controller.close();
+      },
+    });
 
     const input = {
       files: [stream1, stream2],
@@ -71,8 +85,8 @@ describe('jsonStreamify', () => {
     const parsed = JSON.parse(result);
 
     expect(parsed.files).toHaveLength(2);
-    expect(parsed.files[0]).toBe(data1.toString('base64'));
-    expect(parsed.files[1]).toBe(data2.toString('base64'));
+    expect(parsed.files[0]).toBe(Buffer.from(data1).toString('base64'));
+    expect(parsed.files[1]).toBe(Buffer.from(data2).toString('base64'));
     expect(parsed.metadata.count).toBe(2);
   });
 
@@ -112,9 +126,9 @@ describe('jsonStreamify', () => {
   });
 
   it('should handle empty streams', async () => {
-    const emptyStream = new Readable({
-      read() {
-        this.push(null);
+    const emptyStream = new ReadableStream({
+      start(controller) {
+        controller.close();
       },
     });
 
@@ -132,9 +146,9 @@ describe('jsonStreamify', () => {
   });
 
   it('should handle stream errors', async () => {
-    const errorStream = new Readable({
-      read() {
-        this.emit('error', new Error('Stream error'));
+    const errorStream = new ReadableStream({
+      start(controller) {
+        controller.error(new Error('Stream error'));
       },
     });
 
@@ -144,9 +158,115 @@ describe('jsonStreamify', () => {
     await expect(streamToString(stream)).rejects.toThrow('Stream error');
   });
 
-  it('should return a Readable stream', () => {
+  it('should return a ReadableStream', () => {
     const input = { test: 'value' };
     const stream = jsonStreamify(input);
-    expect(stream).toBeInstanceOf(Readable);
+    expect(stream).toBeInstanceOf(ReadableStream);
+  });
+
+  it('should stream JSON output progressively without buffering base64 content', async () => {
+    // Create a stream with multiple chunks to verify progressive emission
+    const chunkSize = 1024; // 1KB chunks
+    const numberOfChunks = 10;
+    let chunksEmitted = 0;
+
+    const testDataStream = new ReadableStream({
+      start(controller) {
+        const emitChunk = () => {
+          if (chunksEmitted < numberOfChunks) {
+            // Create a chunk filled with predictable data
+            const chunk = new Uint8Array(chunkSize).fill(65 + (chunksEmitted % 26));
+            controller.enqueue(chunk);
+            chunksEmitted++;
+            // Emit next chunk asynchronously
+            setTimeout(emitChunk, 0);
+          } else {
+            controller.close();
+          }
+        };
+        emitChunk();
+      },
+    });
+
+    const input = {
+      start: 'beginning',
+      data: testDataStream,
+      end: 'conclusion',
+    };
+
+    const jsonStream = jsonStreamify(input);
+    const reader = jsonStream.getReader();
+
+    const receivedChunks: string[] = [];
+    let hasSeenStart = false;
+    let hasSeenDataField = false;
+    let hasSeenBase64Chunks = false;
+    let hasSeenEnd = false;
+    let base64ChunkCount = 0;
+
+    try {
+      let result = await reader.read();
+      while (!result.done) {
+        const chunk = result.value;
+        receivedChunks.push(chunk);
+
+        // Track what we've seen
+        if (chunk.includes('"start"')) {
+          hasSeenStart = true;
+        }
+        if (chunk.includes('"data"')) {
+          hasSeenDataField = true;
+        }
+        if (chunk.includes('"end"')) {
+          hasSeenEnd = true;
+        }
+
+        // Count chunks that are purely base64 content (no JSON structure)
+        if (
+          hasSeenDataField &&
+          !hasSeenEnd &&
+          chunk.length > 50 &&
+          /^[A-Za-z0-9+/=]+$/.test(chunk.trim())
+        ) {
+          hasSeenBase64Chunks = true;
+          base64ChunkCount++;
+        }
+
+        result = await reader.read();
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // Verify progressive streaming occurred
+    expect(hasSeenStart).toBe(true);
+    expect(hasSeenDataField).toBe(true);
+    expect(hasSeenBase64Chunks).toBe(true);
+    expect(hasSeenEnd).toBe(true);
+
+    // Verify we got multiple chunks (proves streaming, not buffering)
+    expect(receivedChunks.length).toBeGreaterThan(5);
+    expect(base64ChunkCount).toBeGreaterThan(0);
+
+    // Verify the final JSON is valid and complete
+    const completeJson = receivedChunks.join('');
+    const parsed = JSON.parse(completeJson);
+    expect(parsed.start).toBe('beginning');
+    expect(typeof parsed.data).toBe('string');
+    expect(parsed.end).toBe('conclusion');
+
+    // Verify the base64 data is correct
+    const decodedBuffer = Buffer.from(parsed.data as string, 'base64');
+    expect(decodedBuffer.length).toBe(chunkSize * numberOfChunks);
+
+    // Verify the decoded content matches our pattern
+    for (let i = 0; i < numberOfChunks; i++) {
+      const expectedByte = 65 + (i % 26);
+      const chunkStart = i * chunkSize;
+      const chunkEnd = chunkStart + chunkSize;
+      for (let j = chunkStart; j < chunkEnd; j++) {
+        expect(decodedBuffer[j]).toBe(expectedByte);
+      }
+    }
   });
 });

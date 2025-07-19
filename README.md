@@ -1,6 +1,6 @@
 # json-streamify
 
-A streaming JSON serializer that automatically converts embedded file streams to Base64.
+A streaming JSON serializer that automatically converts embedded ReadableStreams to Base64.
 
 ## Table of Contents
 
@@ -11,7 +11,7 @@ A streaming JSON serializer that automatically converts embedded file streams to
 - [Compatibility](#compatibility)
 - [Quick Start](#quick-start)
 - [Demo](#demo)
-- [Working with Node.js Streams](#working-with-nodejs-streams)
+- [Working with Streams](#working-with-streams)
 - [Additional Utilities](#additional-utilities)
 - [Common Use Cases](#common-use-cases)
 - [Contributing](#contributing)
@@ -26,14 +26,14 @@ When building APIs that need to send JSON with binary file data, you typically f
 
 `json-streamify` solves both by:
 
-- Accepting `Readable` streams directly in your JSON structure
+- Accepting `ReadableStream` streams directly in your JSON structure
 - Automatically converting them to Base64 during serialization
-- Returning a `Readable` stream for memory-efficient HTTP requests
+- Returning a `ReadableStream` for memory-efficient HTTP requests
 
 ## Key Features
 
 - **Drop-in replacement** for `JSON.stringify()` with stream support
-- **Automatic Base64 encoding** of any `Readable` streams in your data
+- **Automatic Base64 encoding** of any `ReadableStream` streams in your data
 - **Memory efficient** - streams files instead of loading into memory
 - **TypeScript support** with full type definitions
 - **Dual module support** - works with both CommonJS and ES modules
@@ -48,52 +48,58 @@ npm install @cajuncodemonkey/json-streamify
 
 ### `jsonStreamify(value, replacer?, space?)`
 
-Works exactly like `JSON.stringify()` but returns a `Readable` stream and automatically converts embedded `Readable` streams to Base64.
+Works exactly like `JSON.stringify()` but returns a `ReadableStream` and automatically converts embedded `ReadableStream` streams to Base64.
 
 **Parameters:**
 
-- `value` - The value to serialize (can contain `Readable` streams)
+- `value` - The value to serialize (can contain `ReadableStream` streams)
 - `replacer` - Optional function to transform values (same as JSON.stringify)
 - `space` - Optional formatting parameter (same as JSON.stringify)
 
-**Returns:** `Readable<string>` - A stream that outputs the JSON string
+**Returns:** `ReadableStream<string>` - A stream that outputs the JSON string
 
 #### `streamToString(stream)`
 
-Utility function to convert a `Readable` stream to a string.
+Utility function to convert a `ReadableStream` to a string.
 
 **Parameters:**
 
-- `stream` - The `Readable` stream to convert
+- `stream` - The `ReadableStream` to convert
 
 **Returns:** `Promise<string>` - Promise that resolves to the complete string content
 
 #### `createStreamFromFile(filePath)`
 
-Utility function to create a `Readable` stream from a file.
+Utility function to create a `ReadableStream` from a file.
 
 **Parameters:**
 
 - `filePath` - The path to the file to read
 
-**Returns:** `Readable` - A stream containing the file content
+**Returns:** `ReadableStream<Uint8Array>` - A stream containing the file content
 
 ## Compatibility
 
-- **Node.js**: 18.0.0 or higher
+- **Node.js**: 18.0.0 or higher (uses Web Streams API)
+- **Browsers**: Modern browsers with ReadableStream support
+- **Deno**: Full support for web standard streams
 - **TypeScript**: Full type definitions included
 - **Modules**: Supports both CommonJS (`require`) and ES modules (`import`)
 
 ## Quick Start
 
 ```typescript
-import { Readable } from 'stream';
 import { jsonStreamify, streamToString } from '@cajuncodemonkey/json-streamify';
 
 // Your data with embedded file streams
 const payload = {
   message: 'Upload request',
-  file: Readable.from([Buffer.from('Hello, World!')]),
+  file: new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('Hello, World!'));
+      controller.close();
+    },
+  }),
   metadata: { filename: 'hello.txt' },
 };
 
@@ -105,8 +111,8 @@ const response = await fetch('/api/upload', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: jsonStream,
-  duplex: 'half',
-});
+  duplex: 'half', // Required for streaming bodies
+} as RequestInit); // Type assertion needed for TypeScript compatibility
 
 // Or with wretch for cleaner API calls
 import wretch from 'wretch';
@@ -129,7 +135,7 @@ const result = await wretch('/api/upload')
 }
 ```
 
-The `Readable` stream was automatically converted to Base64!
+The `ReadableStream` was automatically converted to Base64!
 
 ## Demo
 
@@ -148,62 +154,65 @@ This starts a local Express server that accepts Base64-encoded files and demonst
 
 See [examples/README.md](examples/README.md) for detailed demo documentation.
 
-## Working with Node.js Streams
+## Working with Streams
 
-### Converting Built-in Node.js Streams
+### Using Web Standard ReadableStreams
 
-Most Node.js built-in streams are already `Readable` streams and work directly with `jsonStreamify`:
+`json-streamify` uses the web standard `ReadableStream` API, making it compatible across Node.js, browsers, and Deno:
 
 ```typescript
-import { createReadStream } from 'fs';
 import { jsonStreamify } from '@cajuncodemonkey/json-streamify';
 
-// File streams work directly
-const fileStream = createReadStream('./document.pdf');
-const payload = { attachment: fileStream };
-const jsonStream = jsonStreamify(payload);
-```
-
-### Converting Other Stream Types
-
-For other stream types, convert them to `Readable` streams:
-
-```typescript
-import { Readable, Transform, Writable } from 'stream';
-import { pipeline } from 'stream/promises';
-
-// Convert Transform stream to Readable
-const transformStream = new Transform({
-  transform(chunk, encoding, callback) {
-    this.push(chunk.toString().toUpperCase());
-    callback();
-  },
-});
-
-// Pipe to a Readable stream
-const readableStream = new Readable({ read() {} });
-transformStream.pipe(readableStream);
-
-// Convert buffer/string data to Readable
-const dataStream = Readable.from([Buffer.from('Hello, World!')]);
-const payload = { data: dataStream };
-```
-
-### Converting Web Streams (Node.js 16.5+)
-
-```typescript
-import { Readable } from 'stream';
-
-// Convert Web ReadableStream to Node.js Readable
-const webStream = new ReadableStream({
+// Create a ReadableStream from data
+const dataStream = new ReadableStream({
   start(controller) {
-    controller.enqueue(new TextEncoder().encode('Hello'));
+    controller.enqueue(new TextEncoder().encode('Hello, World!'));
     controller.close();
   },
 });
 
-const nodeStream = Readable.fromWeb(webStream);
-const payload = { content: nodeStream };
+const payload = { attachment: dataStream };
+const jsonStream = jsonStreamify(payload);
+```
+
+### Converting Node.js Streams to ReadableStream
+
+For Node.js built-in streams, convert them to web ReadableStreams:
+
+```typescript
+import { createReadStream } from 'fs';
+import { Readable } from 'stream';
+
+// Convert Node.js Readable to web ReadableStream
+const nodeStream = createReadStream('./document.pdf');
+const webStream = Readable.toWeb(nodeStream);
+
+const payload = { attachment: webStream };
+const jsonStream = jsonStreamify(payload);
+```
+
+### Creating ReadableStreams from Data
+
+```typescript
+// From Uint8Array
+const binaryStream = new ReadableStream({
+  start(controller) {
+    const data = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+    controller.enqueue(data);
+    controller.close();
+  },
+});
+
+// From string chunks
+const textStream = new ReadableStream({
+  start(controller) {
+    const chunks = ['Hello', ' ', 'World', '!'];
+    chunks.forEach(chunk =>
+      controller.enqueue(new TextEncoder().encode(chunk))
+    );
+    controller.close();
+  },
+});
 ```
 
 ## Additional Utilities
@@ -215,7 +224,14 @@ The library also exports two utility functions that are useful for stream handli
 ```typescript
 import { streamToString } from '@cajuncodemonkey/json-streamify';
 
-const stream = Readable.from(['Hello', ' ', 'World']);
+const stream = new ReadableStream({
+  start(controller) {
+    controller.enqueue('Hello');
+    controller.enqueue(' ');
+    controller.enqueue('World');
+    controller.close();
+  },
+});
 const text = await streamToString(stream);
 console.log(text); // "Hello World"
 ```

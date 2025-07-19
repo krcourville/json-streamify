@@ -1,15 +1,14 @@
-import { Readable } from 'stream';
-import { writeFileSync } from 'fs';
+import { writeFile } from 'fs/promises';
 import { createStreamFromFile, jsonStreamify } from '../src/index';
 
 const API_URL = 'http://localhost:3000/upload';
 
-function createSampleFiles() {
+async function createSampleFiles() {
   console.log('📝 Creating sample files for demonstration...');
 
   const textContent =
     'Hello from json-streamify!\nThis is a sample text file that will be encoded as Base64.';
-  writeFileSync('sample.txt', textContent);
+  await writeFile('sample.txt', textContent);
 
   const jsonContent = JSON.stringify(
     {
@@ -20,7 +19,7 @@ function createSampleFiles() {
     null,
     2
   );
-  writeFileSync('sample.json', jsonContent);
+  await writeFile('sample.json', jsonContent);
 
   console.log('✅ Sample files created: sample.txt, sample.json\n');
 }
@@ -28,7 +27,7 @@ function createSampleFiles() {
 async function demonstrateJsonStreamify() {
   console.log('🚀 Demonstrating json-streamify with file uploads\n');
 
-  createSampleFiles();
+  await createSampleFiles();
 
   const payload = {
     metadata: {
@@ -39,9 +38,15 @@ async function demonstrateJsonStreamify() {
     files: {
       'sample.txt': createStreamFromFile('sample.txt'),
       'sample.json': createStreamFromFile('sample.json'),
-      'generated-data.txt': Readable.from([
-        Buffer.from('This content was generated in-memory and streamed directly!'),
-      ]),
+      'generated-data.txt': new ReadableStream({
+        start(controller) {
+          const data = new TextEncoder().encode(
+            'This content was generated in-memory and streamed directly!'
+          );
+          controller.enqueue(data);
+          controller.close();
+        },
+      }),
     },
     additionalData: {
       version: '1.0.0',
@@ -66,7 +71,7 @@ async function demonstrateJsonStreamify() {
       },
       body: jsonStream,
       duplex: 'half',
-    });
+    } as RequestInit);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

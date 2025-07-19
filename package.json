@@ -1,7 +1,7 @@
 {
   "name": "@cajuncodemonkey/json-streamify",
-  "version": "1.0.1",
-  "description": "Like JSON.stringify but returns a Readable stream with Base64 encoding for nested streams",
+  "version": "2.0.0",
+  "description": "Like JSON.stringify but returns a ReadableStream with Base64 encoding for nested streams",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
