@@ -112,10 +112,8 @@ This starts a local Express server and demonstrates the library working with a r
 ### Publishing
 
 ```bash
-# For scoped packages (first time)
-npm publish --access public
-
-# For subsequent releases
+# The package.json includes "publishConfig": { "access": "public" }
+# so you can just run:
 npm publish
 ```
 
