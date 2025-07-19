@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
 import { writeFileSync } from 'fs';
-import { createStreamFromFile, jsonStreamify, streamToString } from '../src/index';
+import { createStreamFromFile, jsonStreamify } from '../src/index';
 
 const API_URL = 'http://localhost:3000/upload';
 
@@ -53,11 +53,7 @@ async function demonstrateJsonStreamify() {
   console.log('📦 Creating JSON stream with embedded file streams...');
   const jsonStream = jsonStreamify(payload, null, 2);
 
-  console.log('📤 Converting stream to string for HTTP transmission...');
-  const jsonString = await streamToString(jsonStream);
-
-  console.log('📊 Stream statistics:');
-  console.log(`   JSON size: ${jsonString.length} characters`);
+  console.log('📤 Sending JSON stream directly to API for manual verification...');
   console.log(`   Contains ${Object.keys(payload.files).length} embedded file streams`);
 
   console.log('\n🌐 Sending request to local API...');
@@ -68,7 +64,8 @@ async function demonstrateJsonStreamify() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: jsonString,
+      body: jsonStream,
+      duplex: 'half',
     });
 
     if (!response.ok) {

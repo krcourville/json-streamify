@@ -26,7 +26,7 @@ When building APIs that need to send JSON with binary file data, you typically f
 ## Installation
 
 ```sh
-npm install @ccm/json-streamify
+npm install @cajuncodemonkey/json-streamify
 ```
 
 ## API
@@ -43,7 +43,7 @@ Works exactly like `JSON.stringify()` but returns a `Readable` stream and automa
 
 **Returns:** `Readable<string>` - A stream that outputs the JSON string
 
-### `streamToString(stream)`
+#### `streamToString(stream)`
 
 Utility function to convert a `Readable` stream to a string.
 
@@ -53,7 +53,7 @@ Utility function to convert a `Readable` stream to a string.
 
 **Returns:** `Promise<string>` - Promise that resolves to the complete string content
 
-### `createStreamFromFile(filePath)`
+#### `createStreamFromFile(filePath)`
 
 Utility function to create a `Readable` stream from a file.
 
@@ -73,7 +73,7 @@ Utility function to create a `Readable` stream from a file.
 
 ```typescript
 import { Readable } from 'stream';
-import { jsonStreamify } from '@ccm/json-streamify';
+import { jsonStreamify, streamToString } from '@cajuncodemonkey/json-streamify';
 
 // Your data with embedded file streams
 const payload = {
@@ -91,6 +91,15 @@ const response = await fetch('/api/upload', {
   headers: { 'Content-Type': 'application/json' },
   body: jsonStream,
 });
+
+// Or with wretch for cleaner API calls
+import wretch from 'wretch';
+
+const result = await wretch('/api/upload')
+  .headers({ 'Content-Type': 'application/json' })
+  .body(jsonStream)
+  .post()
+  .json();
 ```
 
 ### What the server receives
@@ -121,6 +130,30 @@ This starts a local Express server that accepts Base64-encoded files and demonst
 - Metadata preservation throughout the process
 
 See [examples/README.md](examples/README.md) for detailed demo documentation.
+
+## Additional Utilities
+
+The library also exports two utility functions that are useful for stream handling:
+
+### `streamToString(stream)` utility
+
+```typescript
+import { streamToString } from '@cajuncodemonkey/json-streamify';
+
+const stream = Readable.from(['Hello', ' ', 'World']);
+const text = await streamToString(stream);
+console.log(text); // "Hello World"
+```
+
+### `createStreamFromFile(filePath)` utility
+
+```typescript
+import { createStreamFromFile } from '@cajuncodemonkey/json-streamify';
+
+const fileStream = createStreamFromFile('./document.pdf');
+// Use the stream in your JSON payload
+const payload = { attachment: fileStream };
+```
 
 ## Common Use Cases
 
