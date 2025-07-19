@@ -175,7 +175,7 @@ const transformStream = new Transform({
   transform(chunk, encoding, callback) {
     this.push(chunk.toString().toUpperCase());
     callback();
-  }
+  },
 });
 
 // Pipe to a Readable stream
@@ -197,7 +197,7 @@ const webStream = new ReadableStream({
   start(controller) {
     controller.enqueue(new TextEncoder().encode('Hello'));
     controller.close();
-  }
+  },
 });
 
 const nodeStream = Readable.fromWeb(webStream);
