@@ -175,6 +175,6 @@ The project includes several automated quality checks:
 
 ## Getting Help
 
-- Check existing [issues](https://github.com/your-org/json-streamify/issues)
+- Check existing [issues](https://github.com/krcourville/json-streamify/issues)
 - Review the [examples](examples/) for usage patterns
 - Run the demo to see the library in action
