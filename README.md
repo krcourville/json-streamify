@@ -2,6 +2,21 @@
 
 A streaming JSON serializer that automatically converts embedded file streams to Base64.
 
+## Table of Contents
+
+- [Why json-streamify?](#why-json-streamify)
+- [Key Features](#key-features)
+- [Installation](#installation)
+- [API](#api)
+- [Compatibility](#compatibility)
+- [Quick Start](#quick-start)
+- [Demo](#demo)
+- [Working with Node.js Streams](#working-with-nodejs-streams)
+- [Additional Utilities](#additional-utilities)
+- [Common Use Cases](#common-use-cases)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Why json-streamify?
 
 When building APIs that need to send JSON with binary file data, you typically face two problems:
@@ -130,6 +145,64 @@ This starts a local Express server that accepts Base64-encoded files and demonst
 - Metadata preservation throughout the process
 
 See [examples/README.md](examples/README.md) for detailed demo documentation.
+
+## Working with Node.js Streams
+
+### Converting Built-in Node.js Streams
+
+Most Node.js built-in streams are already `Readable` streams and work directly with `jsonStreamify`:
+
+```typescript
+import { createReadStream } from 'fs';
+import { jsonStreamify } from '@cajuncodemonkey/json-streamify';
+
+// File streams work directly
+const fileStream = createReadStream('./document.pdf');
+const payload = { attachment: fileStream };
+const jsonStream = jsonStreamify(payload);
+```
+
+### Converting Other Stream Types
+
+For other stream types, convert them to `Readable` streams:
+
+```typescript
+import { Readable, Transform, Writable } from 'stream';
+import { pipeline } from 'stream/promises';
+
+// Convert Transform stream to Readable
+const transformStream = new Transform({
+  transform(chunk, encoding, callback) {
+    this.push(chunk.toString().toUpperCase());
+    callback();
+  }
+});
+
+// Pipe to a Readable stream
+const readableStream = new Readable({ read() {} });
+transformStream.pipe(readableStream);
+
+// Convert buffer/string data to Readable
+const dataStream = Readable.from([Buffer.from('Hello, World!')]);
+const payload = { data: dataStream };
+```
+
+### Converting Web Streams (Node.js 16.5+)
+
+```typescript
+import { Readable } from 'stream';
+
+// Convert Web ReadableStream to Node.js Readable
+const webStream = new ReadableStream({
+  start(controller) {
+    controller.enqueue(new TextEncoder().encode('Hello'));
+    controller.close();
+  }
+});
+
+const nodeStream = Readable.fromWeb(webStream);
+const payload = { content: nodeStream };
+```
 
 ## Additional Utilities
 
